@@ -1,0 +1,84 @@
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Customer: House of Doolittle
+'Developer: FEQ (Sisco)
+'Date: 06/08/2020 [pre-apocalypse]
+'This is part of the label project for House of Doolittle. They want two different kinds of labels to print from the same process, so we are calling this script Synchronously from the other script.
+'This will grab the information saved in the custom table for the other types of labels and print them. The other script name is GCG_6014_GUI_LBL_PREPROC.g2u. 
+'Uses table GCG_6014_GUI_LABS and label GCG_6014_GUI_IND_PACK.lab.
+
+F.Intrinsic.Control.Try
+
+F.Intrinsic.Control.CallSub(PrintLabels)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+F.Intrinsic.Control.Try
+
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.Unload.End
+
+Program.Sub.PrintLabels.Start
+F.Intrinsic.Control.Try
+V.Local.sSql.Declare(String, "")
+V.Local.iReportID.Declare(Long, 0)
+V.Local.iRunID.Declare(Long, 0)
+V.Local.iLogID.Declare(Long, 0)
+
+F.ODBC.Connection!conx.OpenCompanyConnection
+
+'Pack and Individual labels get printed to different printers, so we have to use different scripts for each
+
+'This is for the Pack labels
+F.Intrinsic.String.Build("Select PART, LOC as LOCATION, PART, DESCRIPTION, DESCRIPTION2, LABEL_TITLE, BARCODE, JOB, LABEL_QTY AS LABEL_COPY from GCG_6014_GUI_LABS where TERMINAL = '{0}' and LABEL_TYPE = 'P'", V.Caller.Terminal, V.Local.sSql)
+F.Data.DataTable.CreateFromSQL("dtLables", "conx", V.Local.sSql, True)
+
+F.Intrinsic.Control.If(V.DataTable.dtLables.RowCount, =, 0)
+	F.Intrinsic.Control.CallSub(Unload)
+F.Intrinsic.Control.EndIf
+
+F.Global.BI.GetRunID(V.Local.iRunID)
+F.Global.BI.GetIDFromName("GCG_6014_GUI_IND_PACK_2015.lab", V.Local.iReportID)
+F.Global.BI.StartLogging(V.Local.iRunID, V.Local.iReportID, -1, "", V.Local.iLogID)
+
+
+F.Global.BI.StopLogging(V.Local.iLogID)
+
+'Pack labels use printer "Wrap Pack"
+'F.Global.BI.PrintCodeSoftLabelFromDatatable(V.Local.iRunID, V.Local.iLogID, "dtLables", "Wrap Pack", True)
+F.Global.BI.PrintCodeSoftLabelFromDatatable(V.Local.iRunID, V.Local.iLogID, "dtLables", "WrapPk", True)
+
+F.Intrinsic.String.Build("Delete from GCG_6014_GUI_LABS where TERMINAL = '{0}' and LABEL_TYPE = 'P'", V.Caller.Terminal, V.Local.sSql)
+F.ODBC.Connection!conx.Execute(V.Local.sSql)
+F.ODBC.Connection!conx.Close
+
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(Unload, "Subroutine", V.Ambient.CurrentSubroutine)
+F.Intrinsic.Control.EndTry
+Program.Sub.PrintLabels.End
+
+Program.Sub.Error.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare(String, "")
+
+F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}", V.Caller.ScriptFile, V.Ambient.Newline, V.Args.Subroutine, V.Ambient.ErrorNumber, V.Ambient.ErrorDescription, V.Ambient.GABVersion, V.Local.sError)
+F.Intrinsic.UI.Msgbox(V.Local.sError)
+
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.Error.End
