@@ -1,0 +1,258 @@
+Program.Sub.ScreenSU.Start
+Gui.F_WOLabs..Create
+Gui.F_WOLabs..Size(6525,5460)
+Gui.F_WOLabs..MinX(6525)
+Gui.F_WOLabs..MinY(5460)
+Gui.F_WOLabs..Position(0,0)
+Gui.F_WOLabs..BackColor(-2147483633)
+Gui.F_WOLabs..MousePointer(0)
+Gui.F_WOLabs..Event(UnLoad,Unload)
+Gui.F_WOLabs..Caption("Print Order Labels")
+Gui.F_WOLabs.lbl3.Create(Label,"Part #:",True,585,255,0,1560,945,True,1,"Arial",8,-2147483633,0)
+Gui.F_WOLabs.lbl4.Create(Label,"Description:",True,960,255,0,1185,1260,True,1,"Arial",8,-2147483633,0)
+Gui.F_WOLabs.lbl5.Create(Label,"Job #:",True,555,255,0,1590,480,True,1,"Arial",8,-2147483633,0)
+Gui.F_WOLabs.lblPART.Create(Label,"",True,1935,255,0,2250,945,True,0,"Arial",8,-2147483633,0)
+Gui.F_WOLabs.txtWO.Create(TextBox,"",True,2160,300,0,2205,390,True,0,"Arial",8,-2147483643,1)
+Gui.F_WOLabs.txtWO.Event(LostFocus,WorkOrderLoad)
+Gui.F_WOLabs.lblDESC.Create(Label,"",True,2895,255,0,2250,1260,True,0,"Arial",8,-2147483633,0)
+Gui.F_WOLabs.chkCase.Create(CheckBox)
+Gui.F_WOLabs.chkCase.Size(1065,360)
+Gui.F_WOLabs.chkCase.Position(1965,1980)
+Gui.F_WOLabs.chkCase.Caption("Case")
+Gui.F_WOLabs.chkCase.Value(1)
+Gui.F_WOLabs.chkIndv.Create(CheckBox)
+Gui.F_WOLabs.chkIndv.Size(1095,360)
+Gui.F_WOLabs.chkIndv.Position(1965,2430)
+Gui.F_WOLabs.chkIndv.Caption("Individual")
+Gui.F_WOLabs.chkIndv.Value(1)
+Gui.F_WOLabs.chkPack.Create(CheckBox)
+Gui.F_WOLabs.chkPack.Size(990,360)
+Gui.F_WOLabs.chkPack.Position(1965,2880)
+Gui.F_WOLabs.chkPack.Caption("Pack")
+Gui.F_WOLabs.chkPack.Value(1)
+Gui.F_WOLabs.txtCase.Create(TextBox,"5000",True,1215,300,0,3090,1980,True,0,"Arial",8,-2147483643,1)
+Gui.F_WOLabs.txtCase.NumericOnly(2)
+Gui.F_WOLabs.txtIndv.Create(TextBox,"5000",True,1215,300,0,3090,2430,True,0,"Arial",8,-2147483643,1)
+Gui.F_WOLabs.txtIndv.NumericOnly(2)
+Gui.F_WOLabs.txtPack.Create(TextBox,"5000",True,1215,300,0,3090,2880,True,0,"Arial",8,-2147483643,1)
+Gui.F_WOLabs.txtPack.NumericOnly(2)
+Gui.F_WOLabs.cmdPrint.Create(Button)
+Gui.F_WOLabs.cmdPrint.Size(1140,375)
+Gui.F_WOLabs.cmdPrint.Position(2520,3690)
+Gui.F_WOLabs.cmdPrint.Caption("Print")
+Gui.F_WOLabs.cmdPrint.Event(Click,PrintClick)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Customer: House of Doolittle
+'Developer: FEQ (Sisco)
+'Date: 06/08/2020 [pre-apocalypse]
+'This project will run off the Shop Floor Data Collection (GUI) Script 1 button. (Hook 15961)
+'A screen will open expecting input from the user. The user will select a job number and the kind of labels they want printed.
+'This will use information in table ATG_BARCODE, which is part of an older project that they installed..
+F.Intrinsic.Control.Try
+
+F.ODBC.Connection!conx.OpenCompanyConnection
+
+Gui.F_WOLabs..Show
+
+F.Intrinsic.Control.Catch
+	
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare(String, "")
+
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.Unload.End
+
+Program.Sub.WorkOrderLoad.Start
+F.Intrinsic.Control.Try
+V.Local.sSql.Declare(String, "")
+
+F.Intrinsic.Control.BlockEvents
+
+F.Intrinsic.Control.If(V.DataTable.dtWOinfo.Exists, =, True)
+	F.Data.DataTable.Close("dtWOinfo")
+F.Intrinsic.Control.EndIf
+
+'We are going to look for information on the work order number the user has typed into the textbox
+F.Intrinsic.Control.If(V.Screen.F_WOLabs!txtWO.Text, <>, "")
+	
+	F.Intrinsic.String.Build("Select Top 1 JOB, PART, LOCATION as LOC, DESCRIPTION from V_JOB_HEADER where JOB = '{0}'", V.Screen.F_WOLabs!txtWO.Text, V.Local.sSql)
+	F.Data.DataTable.CreateFromSQL("dtWOinfo", "conx", V.Local.sSql, True)
+	F.Intrinsic.Control.If(V.DataTable.dtWOinfo.RowCount, >, 0)
+		
+		Gui.F_WOLabs.lblPART.Text(V.DataTable.dtWOinfo(0).PART!FieldValTrim)
+		Gui.F_WOLabs.lblDESC.Text(V.DataTable.dtWOinfo(0).DESCRIPTION!FieldValTrim)
+		
+	F.Intrinsic.Control.Else
+	
+		F.Intrinsic.UI.Msgbox("Job has not been found in database")
+		Gui.F_WOLabs.txtWO.Text("")
+		Gui.F_WOLabs.lblPART.Text("")
+		Gui.F_WOLabs.lblDESC.Text("")
+		
+	F.Intrinsic.Control.EndIf
+	
+F.Intrinsic.Control.Else
+	Gui.F_WOLabs.lblPART.Text("")
+	Gui.F_WOLabs.lblDESC.Text("")
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.UnBlockEvents
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(Error, "Subroutine", V.Ambient.CurrentSubroutine)
+F.Intrinsic.Control.EndTry
+Program.Sub.WorkOrderLoad.End
+
+Program.Sub.PrintClick.Start
+F.Intrinsic.Control.Try
+V.Local.sSql.Declare(String, "")
+V.Local.sTitle.Declare(String, "")
+V.Local.sGAB.Declare(String, "")
+V.Local.iLabQty.Declare(Long, 0)
+V.Local.iReportID.Declare(Long, 0)
+V.Local.iRunID.Declare(Long, 0)
+V.Local.iLogID.Declare(Long, 0)
+V.Local.iPlace.Declare(Long, 0)
+
+Gui.F_WOLabs..Visible(False)
+
+'Because they want to print multiple labels from this screen, the label printing is best handled by other scripts. Thus we are going to have to process data and call the script appropriately.
+
+F.Intrinsic.String.Build("Select TOP 1 QTY_ORDER from V_INVENTORY_MSTR where PART = '{0}' and LOCATION = '{1}'", V.DataTable.dtWOinfo(0).PART!FieldValTrim, V.DataTable.dtWOinfo(0).LOC!FieldValTrim, V.Local.sSql)
+F.Data.DataTable.CreateFromSQL("dtInvMst", "conx", V.Local.sSql, True)
+
+F.Intrinsic.String.Build("Select TOP 1 QTY_MAXIMUM, DESCRIPTION_2, TEXT_INFO2 from V_INVENTORY_MST2 where PART = '{0}' and LOCATION = '{1}'", V.DataTable.dtWOinfo(0).PART!FieldValTrim, V.DataTable.dtWOinfo(0).LOC!FieldValTrim, V.Local.sSql)
+F.Data.DataTable.CreateFromSQL("dtInvMst2", "conx", V.Local.sSql, True)
+
+F.Intrinsic.String.Build("Select TOP 1 INDIVIDUAL_BC, PACKAGE_BC, CARTON_BC from ATG_BARCODES where PART = '{0}' and LOCN = '{1}'", V.DataTable.dtWOinfo(0).PART!FieldValTrim, V.DataTable.dtWOinfo(0).LOC!FieldValTrim, V.Local.sSql)
+F.Data.DataTable.CreateFromSQL("dtBarcodes", "conx", V.Local.sSql, True)
+
+'In case any of the queries above do not have data that was pulled in
+F.Data.DataTable.AddRow("dtInvMst")
+F.Data.DataTable.AddRow("dtInvMst2")
+F.Data.DataTable.AddRow("dtBarcodes")
+
+F.Data.DataTable.AddColumn("dtWOinfo", "LABEL_COPY", "Long")
+F.Data.DataTable.AddColumn("dtWOinfo", "PACKAGE_TITLE", "String")
+F.Data.DataTable.AddColumn("dtWOinfo", "PACKAGE_INFO", "String")
+F.Data.DataTable.AddColumn("dtWOinfo", "BARCODE", "String")
+F.Data.DataTable.AddColumn("dtWOinfo", "QTY_INFO", "Long")
+
+'If they want to print the Case label, we will take care of that first
+F.Intrinsic.Control.If(V.Screen.F_WOLabs!chkCase.Value, =, 1)
+	V.Local.iLabQty.Set(V.Screen.F_WOLabs!txtCase.Text)
+	F.Intrinsic.Control.If(V.Local.iLabQty, >, 0)
+		F.Global.BI.GetRunID(V.Local.iRunID)
+		'The customer is using a label created in Codesoft 2015 for now, but they will update when they get a new server
+		F.Global.BI.GetIDFromName("GCG_6014_GUI_CASE_2015.lab", V.Local.iReportID)
+'		F.Global.BI.GetIDFromName("GCG_6014_GUI_CASE.lab", V.Local.iReportID)
+		F.Global.BI.StartLogging(V.Local.iRunID, V.Local.iReportID, -1, "", V.Local.iLogID)
+		
+		F.Intrinsic.String.Split(V.DataTable.dtInvMst2(0).TEXT_INFO2!FieldValTrim, ":", V.Local.sTitle)
+		V.Local.sTitle.RedimPreserve(0,1)
+		
+		F.Data.DataTable.SetValue("dtWOinfo", -1, "LABEL_COPY", V.Local.iLabQty, "PACKAGE_TITLE", V.Local.sTitle(0).Trim, "PACKAGE_INFO", V.Local.sTitle(1), "BARCODE", V.DataTable.dtBarcodes(0).CARTON_BC!FieldValTrim, "QTY_INFO", V.DataTable.dtInvMst2(0).QTY_MAXIMUM!FieldValLong)
+		
+		F.Global.BI.StopLogging(V.Local.iLogID)
+'		F.Global.BI.PrintCodeSoftLabelFromDatatable(V.Local.iRunID, V.Local.iLogID, "dtWOinfo", "Wrap Carton", True)
+		F.Global.BI.PrintCodeSoftLabelFromDatatable(V.Local.iRunID, V.Local.iLogID, "dtWOinfo", "WrapCarton", True)
+		
+	F.Intrinsic.Control.Else
+		F.Intrinsic.UI.Msgbox("Please select appropriate label quantity for the Case labels.")
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+F.Data.DataTable.RemoveColumn("dtWOinfo", "PACKAGE_INFO")
+F.Data.DataTable.RemoveColumn("dtWOinfo", "PACKAGE_TITLE")
+F.Data.DataTable.RemoveColumn("dtWOinfo", "LABEL_COPY")
+F.Data.DataTable.RemoveColumn("dtWOinfo", "QTY_INFO")
+
+F.Data.DataTable.AddColumn("dtWOinfo", "TERMINAL", "String", V.Caller.Terminal)
+F.Data.DataTable.AddColumn("dtWOinfo", "LABEL_TYPE", "String")
+F.Data.DataTable.AddColumn("dtWOinfo", "LABEL_QTY", "Long")
+F.Data.DataTable.AddColumn("dtWOinfo", "DESCRIPTION2", "String")
+F.Data.DataTable.AddColumn("dtWOinfo", "LABEL_TITLE", "String")
+
+'Pack and individual labels are going to be printed from a different script, so we are saving the info into the database and loading it from the other script.
+F.Intrinsic.String.Build("Delete from GCG_6014_GUI_LABS where Terminal = '{0}'", V.Caller.Terminal, V.Local.sSql)
+F.ODBC.Connection!conx.Execute(V.Local.sSql)
+
+'If they want to print the Pack label
+F.Intrinsic.Control.If(V.Screen.F_WOLabs!chkPack.Value, =, 1)
+	V.Local.iLabQty.Set(V.Screen.F_WOLabs!txtPack.Text)
+	F.Intrinsic.Control.If(V.Local.iLabQty, >, 0)
+		F.Intrinsic.String.Build("{0}. PACK", V.DataTable.dtInvMst(0).QTY_ORDER!FieldValLong, V.Local.sTitle)
+		
+		F.Data.DataTable.SetValue("dtWOinfo", -1, "LABEL_TYPE", "P", "LABEL_TITLE", V.Local.sTitle, "LABEL_QTY", V.Local.iLabQty, "DESCRIPTION2", V.DataTable.dtInvMst2(0).DESCRIPTION_2!FieldValTrim, "BARCODE", V.DataTable.dtBarcodes(0).PACKAGE_BC!FieldValTrim)
+		
+		F.Data.DataTable.SaveToDB("dtWOinfo", "conx", "GCG_6014_GUI_LABS", "TERMINAL*!*LABEL_TYPE", 128)
+		
+		'Then we call the external GAB script, which will print the other labels
+		F.Intrinsic.String.Build("{0}\GCG_6014_PACK.g2u", V.Caller.GASDir, V.Local.sGAB)
+		F.Global.General.CallASyncGAS(V.Local.sGAB, V.Local.iPlace)
+		
+		F.Intrinsic.UI.Sleep(15)
+		
+	F.Intrinsic.Control.Else
+		F.Intrinsic.UI.Msgbox("Please select appropriate label quantity for Pack Labels")
+	F.Intrinsic.Control.EndIf
+	
+F.Intrinsic.Control.EndIf
+
+Function.Intrinsic.Debug.Stop
+
+'If they want to print the Individual label
+F.Intrinsic.Control.If(V.Screen.F_WOLabs!chkIndv.Value, =, 1)
+	V.Local.iLabQty.Set(V.Screen.F_WOLabs!txtPack.Text)
+	F.Intrinsic.Control.If(V.Local.iLabQty, >, 0)
+		V.Local.sTitle.Set("INDIVIDUAL")
+		
+		F.Data.DataTable.SetValue("dtWOinfo", -1, "LABEL_TYPE", "I", "LABEL_TITLE", V.Local.sTitle, "LABEL_QTY", V.Local.iLabQty, "DESCRIPTION2", V.DataTable.dtInvMst2(0).DESCRIPTION_2!FieldValTrim, "BARCODE", V.DataTable.dtBarcodes(0).INDIVIDUAL_BC!FieldValTrim)
+		
+		F.Data.DataTable.SaveToDB("dtWOinfo", "conx", "GCG_6014_GUI_LABS", "TERMINAL*!*LABEL_TYPE", 128)
+		
+		'Then we call the external GAB script, which will print the other labels
+		F.Intrinsic.String.Build("{0}\GCG_6014_INDV.g2u", V.Caller.GASDir, V.Local.sGAB)
+		F.Global.General.CallASyncGAS(V.Local.sGAB, V.Local.iPlace)
+
+	F.Intrinsic.Control.Else
+		F.Intrinsic.UI.Msgbox("Please select appropriate label quantity for Individual labels")
+	F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.EndIf
+
+'delete tables/end program
+
+F.Intrinsic.Control.CallSub(Unload)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(Error, "Subroutine", V.Ambient.CurrentSubroutine)
+F.Intrinsic.Control.EndTry
+Program.Sub.PrintClick.End
+
+Program.Sub.Error.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare(String, "")
+
+F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}", V.Caller.ScriptFile, V.Ambient.Newline, V.Args.Subroutine, V.Ambient.ErrorNumber, V.Ambient.ErrorDescription, V.Ambient.GABVersion, V.Local.sError)
+F.Intrinsic.UI.Msgbox(V.Local.sError)
+
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.Error.End
